@@ -1,0 +1,101 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.12.22
+          python-version: 3.12.14
+          enable-cache: true
+          cache-dependency-glob: Backend/uv.lock
+      - run: uv sync --project Backend --locked
+      - run: make check
+      - run: uv build --project Backend --wheel
+      - name: Install wheel outside source tree
+        run: |
+          uv venv /tmp/rag-wheel --python 3.12.14
+          uv export --directory Backend --locked --no-dev --no-emit-project --output-file /tmp/requirements.txt
+          uv pip sync --python /tmp/rag-wheel/bin/python /tmp/requirements.txt
+          uv pip install --python /tmp/rag-wheel/bin/python --no-deps Backend/dist/*.whl
+          cd /tmp
+          /tmp/rag-wheel/bin/rag-center config validate
+          /tmp/rag-wheel/bin/rag-center preflight
+          /tmp/rag-wheel/bin/rag-center openapi --output /tmp/rag-openapi.json
+      - name: Check generated API contract
+        run: |
+          uv run --project Backend rag-center openapi --output /tmp/openapi.json
+          diff Frontend/openapi.json /tmp/openapi.json
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+      - run: npm ci
+      - run: npm run openapi && git diff --exit-code -- src/types/openapi.d.ts
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RAG_TEST_DATABASE_URL: postgresql+psycopg://rag:rag@127.0.0.1:15432/rag_center_test
+      RAG_TEST_REDIS_URL: redis://127.0.0.1:16379/0
+      RAG_TEST_ELASTICSEARCH_URL: http://127.0.0.1:19200
+      RAG_POSTGRES_PORT: "15432"
+      RAG_REDIS_PORT: "16379"
+      RAG_ELASTICSEARCH_PORT: "19200"
+      RAG_API_PORT: "18000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.12.22
+          python-version: 3.12.14
+          enable-cache: true
+          cache-dependency-glob: Backend/uv.lock
+      - uses: docker/setup-buildx-action@v3
+      - name: Build production API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: rag-center:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start isolated infrastructure
+        run: docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml up -d --wait --wait-timeout 180 postgres redis elasticsearch
+      - name: Migrate from wheel
+        run: docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml run --rm migrate
+      - run: uv sync --project Backend --locked
+      - name: Run integration scenarios
+        run: make integration
+      - name: Smoke API, prefork Worker and scheduler
+        run: |
+          docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml --profile test up -d
+          docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml up -d --no-deps --wait --wait-timeout 180 api
+          docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml exec -T api rag-center tenant create tenant_demo demo --plan pro
+          uv run --project Backend python Backend/tests/support/compose_smoke.py http://127.0.0.1:18000
+      - name: Diagnostics on failure
+        if: failure()
+        run: docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml logs --tail=100
+      - name: Remove isolated services
+        if: always()
+        run: docker compose -p rag-ci -f docker-compose.yml -f deploy/compose.ci.yaml --profile test down -v
