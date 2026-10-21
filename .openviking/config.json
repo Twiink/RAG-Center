@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "peer": {
+    "id": "github.com-ai-moonlight-rag-center"
+  },
+  "recall": {
+    "peer_scope": "actor"
+  }
+}

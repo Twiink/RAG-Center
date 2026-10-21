@@ -1,0 +1,6 @@
+app_env: local
+database_url: postgresql+psycopg://postgres:postgres@localhost:5432/rag_center
+elasticsearch_enabled: true
+log_request_body: false
+log_response_body: false
+log_json: true

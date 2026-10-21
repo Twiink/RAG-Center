@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+set -eu
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+. "$ROOT_DIR/scripts/git-hooks/common.sh"
+cd "$ROOT_DIR"
+
+ensure_command uv || exit 1
+
+print_section '推送前检查依赖锁定与后端静态质量'
+uv lock --check --project Backend
+uv run --project Backend --no-sync ruff check Backend
+
+printf '%s\n' '推送前检查通过。'

@@ -1,0 +1,19 @@
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: rag_center_test
+  api:
+    environment: &test-env
+      RAG_DATABASE_URL: postgresql+psycopg://rag:rag@postgres:5432/rag_center_test
+      RAG_MODEL_BASE_URL: http://model-stub:9000/v1
+      RAG_LLM_BASE_URL: http://model-stub:9000/v1
+      RAG_MODEL_API_KEY: protocol-stub
+      RAG_LLM_API_KEY: protocol-stub
+      RAG_AUTH_ENABLED: "false"
+  migrate:
+    environment: *test-env
+  worker:
+    command: [rag-center, worker, run, --concurrency, "1"]
+    environment: *test-env
+  scheduler:
+    environment: *test-env

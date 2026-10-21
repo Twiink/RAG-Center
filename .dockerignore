@@ -1,0 +1,10 @@
+**
+!Backend/
+!Backend/pyproject.toml
+!Backend/uv.lock
+!Backend/src/
+!Backend/src/**
+!Dockerfile
+!Dockerfile.elasticsearch
+Backend/src/**/__pycache__
+Backend/src/**/*.pyc

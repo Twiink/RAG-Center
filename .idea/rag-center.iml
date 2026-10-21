@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.system.id="pyproject.toml" type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$/Backend">
+      <sourceFolder url="file://$MODULE_DIR$/Backend" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Backend/tests" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/.pytest_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/.ruff_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/data/uploads" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/Backend/output" />
+    </content>
+    <orderEntry type="jdk" jdkName="~/Projects/RAG-Center/Backend/.venv" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

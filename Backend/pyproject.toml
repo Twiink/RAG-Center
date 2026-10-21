@@ -1,0 +1,92 @@
+[project]
+name = "rag-center"
+version = "0.2.0"
+description = "Modular asynchronous RAG backend"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic>=1.13.0",
+  "celery[redis]>=5.4.0",
+  "fastapi>=0.115.0",
+  "httpx>=0.27.0",
+  "prometheus-client>=0.21.0",
+  "python-multipart>=0.0.12",
+  "mammoth>=1.6.0",
+  "markdown-it-py>=3.0.0",
+  "markdownify>=0.13.0",
+  "mdit-py-plugins>=0.4.0",
+  "psycopg[binary]>=3.2.0",
+  "pgvector>=0.3.0",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "pymupdf>=1.24.0",
+  "pyyaml>=6.0.1",
+  "redis>=5.0.0",
+  "sqlalchemy>=2.0.0",
+  "typer>=0.12.0",
+  "uvicorn[standard]>=0.30.0",
+]
+
+[project.scripts]
+rag-center = "rag_center.cli:app"
+
+[project.optional-dependencies]
+langfuse = ["langfuse>=2.0.0,<3.0.0"]
+eval = [
+  "datasets>=2.0.0",
+  "openai>=1.0.0",
+  "ragas>=0.2.0,<0.5",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.24.0",
+  "ruff>=0.6.0",
+  "ty>=0.0.1a5",
+]
+
+[build-system]
+requires = ["uv_build==0.12.22"]
+build-backend = "uv_build"
+
+[tool.uv]
+required-version = "==0.12.22"
+python-downloads = "never"
+
+[tool.uv.build-backend]
+module-name = "rag_center"
+module-root = "src"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "TRY", "RUF", "PLE1205", "PLE1206"]
+ignore = [
+  "B008",
+  "TRY003",
+  "TRY300",
+  "TRY301",
+  "RUF001",
+  "RUF002",
+  "RUF003",
+  "E501",
+  "E402",
+]
+exclude = ["scripts", "eval"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = ["integration: requires isolated PostgreSQL, Redis and Elasticsearch"]
+addopts = '-m "not integration"'
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ty.src]
+include = ["src"]
+exclude = []
+
+[tool.ty.rules]
+invalid-return-type = "error"
