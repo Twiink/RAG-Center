@@ -1,0 +1,65 @@
+# OpenTelemetry Collector 配置
+# 接收：应用的 OTLP HTTP trace（端口 4318）
+# 输出：Jaeger（trace）、Prometheus（metrics scrape endpoint）
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+
+processors:
+  # 批量发送：平衡延迟与吞吐
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  # 内存保护：防止 OOM
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  # 资源属性：在 collector 层补充环境信息
+  resource:
+    attributes:
+      - key: collector.version
+        value: "0.113.0"
+        action: insert
+
+exporters:
+  # Jaeger gRPC
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Prometheus 拉取端点（供 Prometheus server 抓取）
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: rag
+    enable_open_metrics: true
+
+  # 调试输出（仅开发，生产移除）
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: warn
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [otlp/jaeger]
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]

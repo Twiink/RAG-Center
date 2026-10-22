@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$/Backend">
       <sourceFolder url="file://$MODULE_DIR$/Backend" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Backend/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/Backend/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/.pytest_cache" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/.ruff_cache" />
       <excludeFolder url="file://$MODULE_DIR$/Backend/.venv" />

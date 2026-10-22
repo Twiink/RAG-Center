@@ -7,8 +7,13 @@ from typing import Literal
 import httpx
 
 from rag_center.core.config import get_settings
-from rag_center.core.logging import log_llm_error, log_llm_request, log_llm_response
+from rag_center.core.log_events import LLM_CALL, STATUS_OK, log_event
+from rag_center.core.logging import get_logger, log_llm_error, log_llm_request, log_llm_response
+from rag_center.core.usage import estimate_cost, get_usage_accumulator
 from rag_center.infrastructure.providers.llm.base import LLMProvider, LLMProviderError
+from rag_center.infrastructure.providers.llm.resilience import record_llm_metrics
+
+_event_logger = get_logger("rag_center.llm.events")
 
 
 class OpenAICompatibleLLMProvider(LLMProvider):
@@ -33,6 +38,59 @@ class OpenAICompatibleLLMProvider(LLMProvider):
         )
         self.client = client
         self.last_usage: dict = {}
+        # 角色标记（fast/strong），由 LLMRoleRouter.provider_for 注入，用于指标和事件区分
+        self.role: str = "fast"
+
+    def _record_usage(self, cost_ms: float, status: str) -> None:
+        """记录 LLM 用量到三个渠道：Prometheus 指标、UsageAccumulator、结构化事件日志。
+
+        三者各自独立 try/except，任一失败不影响主流程。
+        """
+        usage = self.last_usage or {}
+        prompt_tokens = int(usage.get("prompt_tokens", 0))
+        completion_tokens = int(usage.get("completion_tokens", 0))
+        cost_usd = estimate_cost("openai_compatible", self.model, prompt_tokens, completion_tokens)
+
+        # 1. Prometheus 指标
+        try:
+            from rag_center.core.metrics import get_metrics
+
+            metrics = get_metrics()
+            record_llm_metrics(
+                metrics=metrics,
+                model=self.model,
+                role=self.role,
+                status=status,
+                duration_seconds=cost_ms / 1000,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost_usd=cost_usd,
+            )
+        except Exception:
+            pass
+
+        # 2. 累加到当前请求的 UsageAccumulator（供服务层读取后写入月度配额）
+        try:
+            acc = get_usage_accumulator()
+            acc.add("openai_compatible", self.model, prompt_tokens, completion_tokens)
+        except Exception:
+            pass
+
+        # 3. 结构化事件日志（供 analyze-traces 离线分析）
+        try:
+            log_event(
+                _event_logger,
+                LLM_CALL,
+                model=self.model,
+                role=self.role,
+                status=status,
+                duration_ms=int(cost_ms),
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost_usd=round(cost_usd, 6),
+            )
+        except Exception:
+            pass
 
     @asynccontextmanager
     async def _client(self) -> AsyncGenerator[httpx.AsyncClient]:
@@ -133,6 +191,7 @@ class OpenAICompatibleLLMProvider(LLMProvider):
                     "input_chars": input_chars,
                 },
             )
+            self._record_usage(cost_ms, STATUS_OK)
             return parsed
         except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
             cost_ms = (time.perf_counter() - started_at) * 1000

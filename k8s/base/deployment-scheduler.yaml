@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-center-scheduler
+  namespace: rag-center
+  labels:
+    app.kubernetes.io/name: rag-center
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rag-center
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rag-center
+        app.kubernetes.io/component: scheduler
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: scheduler
+          image: ghcr.io/owner/rag-center:IMAGE_TAG
+          command: ["rag-center", "scheduler", "run"]
+          envFrom:
+            - configMapRef:
+                name: rag-center-config
+          env:
+            - name: RAG_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: database-url
+            - name: RAG_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: redis-url
+            - name: RAG_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: llm-api-key
+            - name: RAG_MODEL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: model-api-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          # Scheduler 暂无可探测的健康端点，进程退出由 restartPolicy 处理。
+          # 如需检测“进程存活但调度卡住”，需在代码中补充心跳文件或 HTTP 健康端点。
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]

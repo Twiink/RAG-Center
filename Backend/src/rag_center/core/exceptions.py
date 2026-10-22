@@ -42,6 +42,13 @@ class ErrorCode(Enum):
     LLM_MODEL_ERROR = (40006, "模型不存在或未部署")
     EMBEDDING_FAILED = (40007, "向量模型调用失败")
     LLM_PROVIDER_FAILED = (40008, "大模型服务调用失败")
+    LLM_INVALID_JSON = (40010, "LLM 返回格式错误")
+    ELASTICSEARCH_UNAVAILABLE = (50010, "Elasticsearch 服务不可用")
+    ELASTICSEARCH_TIMEOUT = (50011, "Elasticsearch 请求超时")
+    EMBEDDING_TIMEOUT = (40011, "向量化请求超时")
+    DOCUMENT_PARSE_FAILED_PDF = (20024, "PDF 解析失败")
+    DOCUMENT_PARSE_FAILED_DOCX = (20025, "DOCX 解析失败")
+
     RERANK_FAILED = (40009, "检索重排失败")
 
     # System / service: 50000-59999
@@ -99,6 +106,12 @@ _HTTP_STATUS = {
     ErrorCode.FEEDBACK_INVALID_SCORE: 422,
     ErrorCode.FEEDBACK_LOG_MISMATCH: 403,
     ErrorCode.DB_ERROR: 503,
+    ErrorCode.LLM_INVALID_JSON: 422,
+    ErrorCode.ELASTICSEARCH_UNAVAILABLE: 503,
+    ErrorCode.ELASTICSEARCH_TIMEOUT: 504,
+    ErrorCode.EMBEDDING_TIMEOUT: 504,
+    ErrorCode.DOCUMENT_PARSE_FAILED_PDF: 422,
+    ErrorCode.DOCUMENT_PARSE_FAILED_DOCX: 422,
 }
 
 

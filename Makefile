@@ -1,5 +1,8 @@
 UV := uv run --directory Backend rag-center
-.PHONY: init dev serve migrate worker scheduler check test integration preflight doctor config frontend-check frontend-dev openapi compose-up compose-down
+.PHONY: init dev serve migrate worker scheduler check test integration preflight doctor config \
+        frontend-check frontend-dev openapi \
+        compose-up compose-down compose-observability-up compose-observability-down \
+        lint format-check typecheck
 init:
 	uv sync --project Backend --locked
 	$(UV) init
@@ -15,6 +18,12 @@ scheduler:
 	$(UV) scheduler run
 check:
 	$(UV) check
+lint:
+	cd Backend && uv run ruff check src/
+format-check:
+	cd Backend && uv run ruff format --check src/
+typecheck:
+	cd Backend && uv run ty check
 test:
 	cd Backend && uv run pytest
 integration:
@@ -36,3 +45,7 @@ compose-up:
 	docker compose up -d --build
 compose-down:
 	docker compose down
+compose-observability-up:
+	docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+compose-observability-down:
+	docker compose -f docker-compose.yml -f docker-compose.observability.yml down

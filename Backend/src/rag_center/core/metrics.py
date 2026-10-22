@@ -130,3 +130,13 @@ class Metrics:
             ["worker_id"],
             registry=self.registry,
         )
+
+
+def get_metrics() -> Metrics:
+    """获取当前容器的指标实例"""
+    from rag_center.core.container import active_container
+
+    container = active_container.get()
+    if container is None:
+        raise RuntimeError("容器未初始化")
+    return container.metrics

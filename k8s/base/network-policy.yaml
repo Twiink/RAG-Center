@@ -1,0 +1,106 @@
+---
+# API 入站：允许所有来源访问 8000 端口
+# API 出站：只允许访问 postgres、redis、elasticsearch（同 namespace）
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 8000
+          protocol: TCP
+  egress:
+    # 允许 DNS 解析
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # 允许访问同 namespace 内的 postgres、redis、elasticsearch
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rag-center
+      ports:
+        - port: 5432
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 9200
+          protocol: TCP
+    # 允许调用外部 LLM API（HTTPS）
+    - ports:
+        - port: 443
+          protocol: TCP
+---
+# Worker 出站：只允许访问同 namespace 内的基础服务
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rag-center-worker
+  namespace: rag-center
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rag-center
+      ports:
+        - port: 5432
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 9200
+          protocol: TCP
+    - ports:
+        - port: 443
+          protocol: TCP
+---
+# Scheduler 出站：只访问同 namespace 内的 postgres 和 redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rag-center-scheduler
+  namespace: rag-center
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: scheduler
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rag-center
+      ports:
+        - port: 5432
+          protocol: TCP
+        - port: 6379
+          protocol: TCP

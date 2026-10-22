@@ -62,7 +62,11 @@ from rag_center.modules.retrieval.schemas.rag import (
     RetrievalOptions,
     RetrieveRequest,
 )
-from rag_center.modules.retrieval.services.rag_service import RagService
+from rag_center.modules.retrieval.services.rag_service import (
+    RagService,
+    _check_llm_cost_quota,
+    _record_llm_cost,
+)
 from rag_center.modules.tenants.policy.plan_resolver import PlanResolver
 from rag_center.modules.tenants.policy.retrieve_policy import resolve_retrieve_request
 from rag_center.modules.tenants.repositories.tenant_repository import TenantRepository
@@ -218,6 +222,7 @@ class ResearchService:
             qps_limit=plan_context.limits.retrieve_qps,
             daily_limit=plan_context.limits.daily_retrieve_limit,
         )
+        await _check_llm_cost_quota(tenant_id)
         research_id = generate_uuid()
         log_id = generate_uuid()
         observability = ResearchObservability(research_id=research_id, log_id=log_id)
@@ -270,6 +275,7 @@ class ResearchService:
         )
 
         await get_rate_limit_service().record_retrieve_success(tenant_id)
+        await _record_llm_cost(tenant_id)
 
         stages = [
             self._stage_usage(

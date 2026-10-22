@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+  labels:
+    app.kubernetes.io/name: rag-center
+    app.kubernetes.io/component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rag-center
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rag-center
+        app.kubernetes.io/component: api
+    spec:
+      # 非 root 用户运行，与 Dockerfile 中 uid 10001 对应
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: api
+          image: ghcr.io/owner/rag-center:IMAGE_TAG
+          command: ["rag-center", "serve"]
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: rag-center-config
+          env:
+            # 从 Secret 注入敏感配置
+            - name: RAG_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: database-url
+            - name: RAG_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: redis-url
+            - name: RAG_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: llm-api-key
+            - name: RAG_MODEL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rag-center-secrets
+                  key: model-api-key
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          # 启动探针：给迁移和初始化留足时间
+          startupProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 5
+          # 就绪探针：通过后才接收流量
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          # 存活探针：失败时重启容器
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]

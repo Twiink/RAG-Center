@@ -12,6 +12,7 @@ import queue
 import re
 import sys
 import time
+import traceback
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, ClassVar, cast
@@ -111,20 +112,38 @@ class JsonFormatter(logging.Formatter):
                 "relativeCreated",
                 "thread",
                 "threadName",
+                "taskName",
+                # 敏感/已处理字段：exc_info 原始元组含未脱敏异常，exc_text 和 stack_info
+                # 已通过下方的 exception/stack_info 字段单独格式化并脱敏。
                 "exc_info",
                 "exc_text",
                 "stack_info",
                 "request_id",
                 "job_id",
+                "trace_id",
             ):
                 log_data[key] = redact_dict(value)
 
-        # 输出异常堆栈
+        # 格式化异常堆栈
         if record.exc_info:
-            exc_text = self.formatException(record.exc_info)
-            log_data["exc_info"] = redact_sensitive(exc_text)
+            log_data["exception"] = redact_sensitive(
+                "".join(traceback.format_exception(*record.exc_info))
+            )
 
-        return json.dumps(log_data, ensure_ascii=False)
+        if record.stack_info:
+            log_data["stack_info"] = redact_sensitive(record.stack_info)
+
+        # 添加 trace_id（从当前 OTel span 读取）
+        try:
+            from rag_center.core.tracing import get_trace_id
+
+            trace_id = get_trace_id()
+            if trace_id:
+                log_data["trace_id"] = trace_id
+        except Exception:
+            pass
+
+        return json.dumps(log_data, default=str, ensure_ascii=False)
 
 
 class ColorFormatter(logging.Formatter):

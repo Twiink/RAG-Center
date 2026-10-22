@@ -1,0 +1,85 @@
+groups:
+  - name: rag-center.api
+    interval: 60s
+    rules:
+      # API 错误率超过 5%（5 分钟窗口）
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            sum(rate(rag_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(rag_http_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 5xx 错误率过高"
+          description: "5xx 错误率 {{ $value | humanizePercentage }}，超过 5% 阈值，持续 2 分钟。"
+
+      # P99 延迟超过 5 秒
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(rag_http_request_duration_seconds_bucket[5m])) by (le, route)
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API P99 延迟过高"
+          description: "路由 {{ $labels.route }} P99 延迟 {{ $value }}s，超过 5s 阈值。"
+
+  - name: rag-center.llm
+    interval: 60s
+    rules:
+      # LLM 调用错误率超过 10%
+      - alert: HighLLMErrorRate
+        expr: |
+          (
+            sum(rate(rag_llm_requests_total{status="error"}[10m]))
+            /
+            sum(rate(rag_llm_requests_total[10m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM 调用错误率过高"
+          description: "LLM 错误率 {{ $value | humanizePercentage }}，超过 10% 阈值。"
+
+      # LLM 费用增速异常（每分钟超过 $1，即月均 $43000）
+      - alert: LLMCostAnomaly
+        expr: |
+          rate(rag_llm_cost_total[5m]) * 60 > 1.0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM 费用增速异常"
+          description: "LLM 费用增速 {{ $value | humanize }}$/min，超过 $1/min 阈值。"
+
+  - name: rag-center.indexing
+    interval: 60s
+    rules:
+      # 索引失败任务积压
+      - alert: IndexJobFailureBacklog
+        expr: |
+          rag_index_jobs{status="failed"} > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "索引失败任务积压"
+          description: "失败任务数 {{ $value }}，超过 50 个，持续 10 分钟。"
+
+      # 限流拒绝激增
+      - alert: RateLimitRejectionSpike
+        expr: |
+          rate(rag_ratelimit_rejections_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: info
+        annotations:
+          summary: "限流拒绝激增"
+          description: "限流拒绝速率 {{ $value | humanize }}/s（kind={{ $labels.kind }}）。"

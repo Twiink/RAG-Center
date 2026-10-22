@@ -109,6 +109,13 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/1"
 
+    # 限流故障策略：open = Redis 故障时放行，closed = 返回 503
+    rate_limit_failure_mode: str = "open"
+    # LLM 月度成本预算（美元/租户）；None 表示不限制
+    llm_monthly_cost_budget_usd: float | None = None
+    # 幂等响应缓存 TTL（秒）
+    idempotency_ttl_seconds: int = 86400
+
     query_rewrite_enabled: bool = False
     query_rewrite_timeout_ms: int = Field(default=2000, ge=100)
 
@@ -125,6 +132,16 @@ class Settings(BaseSettings):
     index_job_retry_backoff_seconds: int = Field(default=5, ge=1)
     index_job_redispatch_seconds: int = Field(default=60, ge=1)
     index_outbox_interval_seconds: float = Field(default=1.0, gt=0)
+
+    # OTel 追踪配置
+    otel_exporter_otlp_endpoint: str = ""
+    trace_sample_default_rate: float = 0.001  # 0.1%
+    trace_sample_slow_rate: float = 0.10  # 10%
+    trace_sample_p99_threshold_ms: float = 5000.0
+
+    # Research 配置
+    research_stage_timeout_seconds: int = 300
+    research_strict_mode: bool = False
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),

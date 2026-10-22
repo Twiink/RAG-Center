@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rag-center
+
+resources:
+  - ../../base
+
+# 生产镜像标签由 CI/CD 在 build 时通过 kustomize edit set image 覆盖
+images:
+  - name: ghcr.io/owner/rag-center
+    newTag: latest
+
+patches:
+  - path: patches.yaml

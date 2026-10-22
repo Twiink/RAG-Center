@@ -1,0 +1,50 @@
+---
+# Dev 环境：API 单副本，降低资源限制
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: api
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+# Dev 环境：Worker 单副本，降低资源限制
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-center-worker
+  namespace: rag-center
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: worker
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+# Dev 环境：HPA 最小副本数设为 1
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+spec:
+  minReplicas: 1
+  maxReplicas: 3

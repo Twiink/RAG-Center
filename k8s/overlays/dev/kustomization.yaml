@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rag-center
+
+resources:
+  - ../../base
+
+# Dev 镜像标签（通常指向 latest 或 branch 构建）
+images:
+  - name: ghcr.io/owner/rag-center
+    newTag: dev
+
+patches:
+  - path: patches.yaml
+
+# Dev 环境额外 ConfigMap 覆盖
+configMapGenerator:
+  - name: rag-center-config
+    behavior: merge
+    literals:
+      - RAG_APP_ENV=local
+      - RAG_LOG_LEVEL=DEBUG

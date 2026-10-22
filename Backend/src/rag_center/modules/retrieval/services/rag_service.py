@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from rag_center.core.config import get_settings
 from rag_center.core.exceptions import AppError, ErrorCode
 from rag_center.core.index_versions import DEFAULT_INDEX_VERSION
-from rag_center.core.logging import get_logger
+from rag_center.core.logging import get_logger, get_request_id
+from rag_center.core.usage import get_usage_accumulator
 from rag_center.infrastructure.http.clients import ExternalHttpClients
 from rag_center.infrastructure.ids import generate_uuid
 from rag_center.infrastructure.observability.langfuse_client import RetrieveObservability
@@ -61,6 +62,31 @@ from rag_center.modules.tenants.repositories.tenant_repository import TenantRepo
 from rag_center.modules.tenants.services.rate_limit_service import get_rate_limit_service
 
 logger = get_logger(__name__)
+
+
+async def _check_llm_cost_quota(tenant_id: str) -> None:
+    """检查月度 LLM 成本配额；未配置预算或后端不可用时放行。"""
+    try:
+        from rag_center.modules.tenants.services.llm_cost_manager import get_llm_cost_manager
+
+        await get_llm_cost_manager().check(tenant_id)
+    except AppError:
+        raise
+    except Exception:
+        pass
+
+
+async def _record_llm_cost(tenant_id: str) -> None:
+    """将本次请求累计的 LLM 成本写入月度配额；失败静默跳过。"""
+    try:
+        from rag_center.modules.tenants.services.llm_cost_manager import get_llm_cost_manager
+
+        acc = get_usage_accumulator()
+        if acc.cost <= 0:
+            return
+        await get_llm_cost_manager().record(tenant_id, acc.cost, get_request_id())
+    except Exception:
+        pass
 
 
 @dataclass(slots=True)
@@ -139,6 +165,7 @@ class RagService:
             qps_limit=plan_context.limits.retrieve_qps,
             daily_limit=plan_context.limits.daily_retrieve_limit,
         )
+        await _check_llm_cost_quota(tenant_id)
 
         retrieval_mode = self._get_retrieval_mode(resolved_request)
         top_k = resolved_request.top_k or get_settings().top_k
@@ -223,6 +250,7 @@ class RagService:
 
         primary_kb_id = kb_ids[0]
         await get_rate_limit_service().record_retrieve_success(tenant_id)
+        await _record_llm_cost(tenant_id)
 
         logger.info(
             "BUSINESS_NODE | rag_retrieve_success | kb_ids=%s | mode=%s | returned_count=%s | "

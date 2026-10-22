@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import typer
 
@@ -211,7 +212,7 @@ def scheduler_run() -> None:
     asyncio.run(run())
 
 
-from rag_center.cli.management import index_app, key_app, tenant_app
+from rag_center.cli.management import index_app, key_app, run_operation, tenant_app
 
 app.add_typer(tenant_app, name="tenant")
 app.add_typer(key_app, name="key")
@@ -237,3 +238,110 @@ def evaluate(ctx: typer.Context):
     from rag_center.evaluation.cli import main
 
     raise typer.Exit(main(ctx.args))
+
+
+jobs_app = typer.Typer(help="索引任务诊断")
+app.add_typer(jobs_app, name="jobs")
+
+
+@app.command("analyze-traces")
+def analyze_traces(
+    log_file: list[Path] = typer.Option([], "--log-file", help="日志文件路径（可多次指定）"),
+    since: str | None = typer.Option(None, "--since", help="起始时间（ISO 8601）"),
+    until: str | None = typer.Option(None, "--until", help="结束时间（ISO 8601）"),
+    tenant: str | None = typer.Option(None, "--tenant", help="租户 ID"),
+    model: str | None = typer.Option(None, "--model", help="模型名称"),
+    format: str = typer.Option("text", "--format", help="输出格式（text|json）"),
+) -> None:
+    """分析日志并生成故障诊断报告"""
+    import json
+
+    from rag_center.core.trace_analysis import analyze, load_events, render_text
+
+    events = load_events(log_file, since=since, until=until, tenant=tenant, model=model)
+    report = analyze(events)
+
+    if format == "json":
+        typer.echo(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        typer.echo(render_text(report))
+
+
+@jobs_app.command("stats")
+def jobs_stats() -> None:
+    """显示任务状态分布统计"""
+    import json
+
+    from rag_center.modules.indexing.services.job_diagnostics import JobDiagnosticsService
+
+    async def operation(session):
+        service = JobDiagnosticsService(session)
+        return await service.get_status_stats()
+
+    result = run_operation(operation)
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+@jobs_app.command("failures")
+def jobs_failures(limit: int = typer.Option(20, "--limit", help="最大返回数量")) -> None:
+    """显示最近失败的任务及错误类型统计"""
+    import json
+
+    from rag_center.modules.indexing.services.job_diagnostics import JobDiagnosticsService
+
+    async def operation(session):
+        service = JobDiagnosticsService(session)
+        failures = await service.get_recent_failures(limit)
+        error_counts = await service.get_error_type_counts()
+        return {"failures": failures, "error_counts": error_counts}
+
+    result = run_operation(operation)
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+@jobs_app.command("leases")
+def jobs_leases() -> None:
+    """显示过期租约的运行中任务"""
+    import json
+
+    from rag_center.modules.indexing.services.job_diagnostics import JobDiagnosticsService
+
+    async def operation(session):
+        service = JobDiagnosticsService(session)
+        return await service.get_expired_leases()
+
+    result = run_operation(operation)
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+@jobs_app.command("lag")
+def jobs_lag() -> None:
+    """显示未发布消息统计及队列延迟信息"""
+    import json
+
+    from rag_center.modules.indexing.services.job_diagnostics import JobDiagnosticsService
+
+    async def operation(session):
+        service = JobDiagnosticsService(session)
+        return await service.get_outbox_lag()
+
+    result = run_operation(operation)
+    typer.echo(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+@jobs_app.command("retry")
+def jobs_retry(job_id: str = typer.Argument(..., help="任务 ID")) -> None:
+    """重试失败的任务"""
+    from rag_center.modules.indexing.services.job_diagnostics import JobDiagnosticsService
+
+    async def operation(session):
+        service = JobDiagnosticsService(session)
+        await service.retry_job(job_id)
+        return {"status": "success", "job_id": job_id}
+
+    try:
+        run_operation(operation)
+        typer.echo(f"任务 {job_id} 已重新加入队列")
+    except ValueError as e:
+        typer.echo(f"错误: {e}")
+        raise typer.Exit(1) from e

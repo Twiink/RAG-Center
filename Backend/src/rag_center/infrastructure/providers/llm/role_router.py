@@ -27,4 +27,6 @@ class LLMRoleRouter:
         *,
         client: httpx.AsyncClient | None = None,
     ) -> OpenAICompatibleLLMProvider:
-        return OpenAICompatibleLLMProvider(model=cls.model_for(role), client=client)
+        provider = OpenAICompatibleLLMProvider(model=cls.model_for(role), client=client)
+        provider.role = role.value
+        return provider

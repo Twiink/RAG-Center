@@ -16,6 +16,7 @@ from rag_center.core.container import ResourceContainer
 from rag_center.core.exceptions import AppError, ErrorCode
 from rag_center.core.logging import configure_logging, get_logger
 from rag_center.core.middleware import request_response_log_middleware
+from rag_center.core.tracing import instrument_fastapi, setup_tracing
 from rag_center.schemas.common import error_response
 
 
@@ -24,6 +25,17 @@ def create_app(settings=None) -> FastAPI:
 
     active_settings = settings or load_settings()
     logger = get_logger(__name__)
+
+    # 进程级 OTel 初始化——未配置 endpoint 时为 NoOp，幂等，失败不中断启动。
+    tracing_status = setup_tracing(active_settings)
+    if tracing_status.status not in ("disabled", "initialized"):
+        logger.warning(
+            "OTel 追踪启动异常",
+            extra={
+                "status": tracing_status.status,
+                "failures": list(tracing_status.instrumentation_failures),
+            },
+        )
 
     @asynccontextmanager
     async def app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -46,6 +58,8 @@ def create_app(settings=None) -> FastAPI:
         lifespan=app_lifespan,
     )
     app.state.settings = active_settings
+    # FastAPI 请求级 OTel span 插桩（app 实例创建后才能调用）
+    instrument_fastapi(app)
     app.middleware("http")(request_response_log_middleware)
     app.include_router(health_router)
     app.include_router(api_router)

@@ -4,47 +4,66 @@ version = "0.2.0"
 description = "Modular asynchronous RAG backend"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "alembic>=1.13.0",
-  "celery[redis]>=5.4.0",
-  "fastapi>=0.115.0",
-  "httpx>=0.27.0",
-  "prometheus-client>=0.21.0",
-  "python-multipart>=0.0.12",
-  "mammoth>=1.6.0",
-  "markdown-it-py>=3.0.0",
-  "markdownify>=0.13.0",
-  "mdit-py-plugins>=0.4.0",
-  "psycopg[binary]>=3.2.0",
-  "pgvector>=0.3.0",
-  "pydantic>=2.8.0",
-  "pydantic-settings>=2.4.0",
-  "pymupdf>=1.24.0",
-  "pyyaml>=6.0.1",
-  "redis>=5.0.0",
-  "sqlalchemy>=2.0.0",
-  "typer>=0.12.0",
-  "uvicorn[standard]>=0.30.0",
+  # 核心框架：锁定小版本避免破坏性变更
+  "alembic~=1.19.0",
+  "fastapi~=0.141.0",
+  "pydantic~=2.13.0",
+  "pydantic-settings~=2.15.0",
+  "sqlalchemy~=2.0.0",
+
+  # 任务队列：锁定小版本保持 protocol 兼容
+  "celery[redis]~=5.6.0",
+
+  # HTTP 客户端与服务器
+  "httpx~=0.28.0",
+  "uvicorn[standard]~=0.52.0",
+
+  # 监控与观测：OpenTelemetry 套件须协调升级
+  "prometheus-client~=0.26.0",
+  "opentelemetry-sdk~=1.45.0",
+  "opentelemetry-exporter-otlp-proto-http~=1.45.0",
+  "opentelemetry-instrumentation-fastapi~=0.66b0",
+  "opentelemetry-instrumentation-httpx~=0.66b0",
+  "opentelemetry-instrumentation-sqlalchemy~=0.66b0",
+  "opentelemetry-instrumentation-redis~=0.66b0",
+  "opentelemetry-instrumentation-celery~=0.66b0",
+
+  # 数据库驱动与扩展
+  "psycopg[binary]~=3.3.0",
+  "pgvector~=0.5.0",
+  "redis~=6.4.0",
+
+  # 文档处理
+  "mammoth~=1.12.0",
+  "markdown-it-py~=4.2.0",
+  "markdownify~=1.2.0",
+  "mdit-py-plugins~=0.6.0",
+  "pymupdf~=1.28.0",
+
+  # 工具类
+  "python-multipart~=0.0.32",
+  "pyyaml~=6.0.0",
+  "typer~=0.27.0",
 ]
 
 [project.scripts]
 rag-center = "rag_center.cli:app"
 
 [project.optional-dependencies]
-langfuse = ["langfuse>=2.0.0,<3.0.0"]
+langfuse = ["langfuse~=2.60.0"]
 eval = [
-  "datasets>=2.0.0",
-  "openai>=1.0.0",
-  "ragas>=0.2.0,<0.5",
+  "datasets~=5.1.0",
+  "openai~=3.35.0",
+  "ragas~=0.3.0",
 ]
 
 [dependency-groups]
 dev = [
-  "pytest>=8.0.0",
-  "pytest-asyncio>=0.24.0",
-  "ruff>=0.6.0",
+  "pytest~=9.1.0",
+  "pytest-asyncio~=1.4.0",
+  "ruff~=0.16.0",
   "ty>=0.0.1a5",
 ]
-
 [build-system]
 requires = ["uv_build==0.12.22"]
 build-backend = "uv_build"

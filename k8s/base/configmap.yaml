@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rag-center-config
+  namespace: rag-center
+data:
+  # 运行环境
+  RAG_APP_ENV: "production"
+  # 数据库连接池大小
+  RAG_DATABASE_POOL_SIZE: "10"
+  # 日志配置
+  RAG_LOG_LEVEL: "INFO"
+  RAG_LOG_JSON: "true"
+  # Prometheus 指标
+  RAG_METRICS_ENABLED: "true"

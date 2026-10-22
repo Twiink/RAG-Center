@@ -17,6 +17,15 @@ Backend/data/uploads/
 Backend/eval/reports/
 Backend/eval/datasets/imported_from_feedback.json
 vite-env.d.ts
+# 可观测性数据目录（docker compose volumes 挂载的本地路径）
+prometheus_data/
+grafana_data/
+# K8s 私有覆盖（不提交到 Git）
+k8s/overlays/*/secret-*.yaml
+k8s/overlays/*/.env
+# CI secrets 本地覆盖
+.github/workflows/*.local.yml
+
 
 Backend/.env
 Backend/config/private.yaml

@@ -1,0 +1,78 @@
+---
+# 生产环境：API 3 副本，生产资源限制
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: api
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+# 生产环境：Worker 2 副本
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-center-worker
+  namespace: rag-center
+spec:
+  replicas: 2
+---
+# 生产环境：HPA 最小 2 副本，最大 10
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# API PodDisruptionBudget：滚动更新期间至少保留 2 个就绪副本
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rag-center-api
+  namespace: rag-center
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rag-center
+      app.kubernetes.io/component: api
+---
+# Worker PodDisruptionBudget：至少保留 1 个副本处理索引任务
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rag-center-worker
+  namespace: rag-center
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rag-center
+      app.kubernetes.io/component: worker
