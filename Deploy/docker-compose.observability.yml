@@ -1,5 +1,5 @@
 # 可观测性扩展：与 docker-compose.yml 叠加使用。
-#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#   docker compose -f Deploy/docker-compose.yml -f Deploy/docker-compose.observability.yml up -d
 #
 # 包含：OTel Collector（接收 OTLP、转发 Jaeger/Prometheus）、Jaeger、Prometheus、Grafana。
 # 启动后访问：Jaeger http://localhost:16686  Grafana http://localhost:3001  Prometheus http://localhost:9091
@@ -10,7 +10,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.113.0
     command: ["--config=/etc/otel/config.yaml"]
     volumes:
-      - ./infra/otel-collector.yaml:/etc/otel/config.yaml:ro
+      - ../infra/otel-collector.yaml:/etc/otel/config.yaml:ro
     ports:
       - "127.0.0.1:4317:4317"   # gRPC OTLP
       - "127.0.0.1:4318:4318"   # HTTP OTLP（应用使用此端口）
@@ -41,8 +41,8 @@ services:
       - --storage.tsdb.retention.time=15d
       - --web.enable-lifecycle
     volumes:
-      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./infra/prometheus-alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - ../infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../infra/prometheus-alerts.yaml:/etc/prometheus/alerts.yaml:ro
       - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9091:9090"   # 避免与应用的 9090 冲突
@@ -59,7 +59,7 @@ services:
       GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../infra/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
       - "127.0.0.1:3001:3000"
     restart: unless-stopped

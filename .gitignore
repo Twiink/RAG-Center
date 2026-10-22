@@ -1,5 +1,6 @@
 .env
 Frontend/.env
+.idea/
 *.tsbuildinfo
 Frontend/vite.config.d.ts
 .venv/

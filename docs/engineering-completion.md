@@ -185,7 +185,7 @@ ghcr.io/owner/rag-center:v0.2.0
 
 #### 3. Docker Compose 可观测性扩展
 
-**文件**: `docker-compose.observability.yml`
+**文件**: `Deploy/docker-compose.observability.yml`
 
 **服务**:
 - `otel-collector`: OpenTelemetry Collector (OTLP → Jaeger + Prometheus)
@@ -416,8 +416,8 @@ RUN uv sync --locked --no-dev
 ### 本地开发
 
 ```
-docker-compose up -d              # 基础服务（PostgreSQL/Redis/Elasticsearch）
-make compose-observability-up     # 完整可观测栈
+docker compose -f Deploy/docker-compose.yml up -d   # 基础服务（PostgreSQL/Redis/Elasticsearch）
+make compose-observability-up                        # 完整可观测栈
 ```
 
 **可访问端点**:

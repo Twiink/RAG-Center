@@ -1,7 +1,7 @@
 x-backend: &backend
   image: rag-center:local
   build:
-    context: .
+    context: ..
   environment: &backend-env
     RAG_APP_ENV: production
     RAG_DATABASE_URL: postgresql+psycopg://rag:rag@postgres:5432/rag_center
@@ -47,7 +47,7 @@ services:
       retries: 30
   elasticsearch:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.elasticsearch
     image: rag-center-elasticsearch:8.17.10-ik
     environment:
@@ -94,7 +94,7 @@ services:
     image: rag-center:local
     profiles: [test]
     command: [python, /tests/model_stub.py]
-    volumes: [./Backend/tests/support/model_stub.py:/tests/model_stub.py:ro]
+    volumes: [../Backend/tests/support/model_stub.py:/tests/model_stub.py:ro]
     healthcheck: {disable: true}
   langfuse-db:
     image: postgres:16-alpine

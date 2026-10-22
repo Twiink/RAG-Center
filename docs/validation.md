@@ -43,7 +43,7 @@ uv build --project Backend --wheel
 docker build -t rag-center:local .
 ```
 
-完整隔离环境步骤以 `.github/workflows/ci.yml` 为准：先启动基础设施、执行迁移与集成测试，再启动 API、Worker、调度器和模型桩；仅等待 API 的健康检查，随后执行 `Backend/tests/support/compose_smoke.py` 验证消费者。`deploy/compose.ci.yaml` 只提供测试模型地址及协议桩占位凭据。
+完整隔离环境步骤以 `.github/workflows/ci.yml` 为准：先启动基础设施、执行迁移与集成测试，再启动 API、Worker、调度器和模型桩；仅等待 API 的健康检查，随后执行 `Backend/tests/support/compose_smoke.py` 验证消费者。`Deploy/compose.ci.yaml` 只提供测试模型地址及协议桩占位凭据。
 
 集成测试要求明确设置 `RAG_TEST_DATABASE_URL`，数据库名以 `_test` 结尾，同时设置独立的 `RAG_TEST_REDIS_URL`、`RAG_TEST_ELASTICSEARCH_URL`。不要将该步骤指向开发或生产数据。
 

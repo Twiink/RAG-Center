@@ -47,7 +47,7 @@ sh scripts/install-git-hooks.sh
 
 集成测试要求 `RAG_TEST_DATABASE_URL`，数据库名必须以 `_test` 结尾，先执行 `RAG_DATABASE_URL=<测试库> rag-center migrate`。测试创建独立租户并清理自身数据，不删除开发数据库。Redis、Elasticsearch 同样应使用隔离实例。
 
-`tests/support/model_stub.py` 提供本地 embeddings、rerank 和聊天协议；`tests/support/compose_smoke.py` 通过真实 API/Worker/调度器连续执行任务并检索。CI 的 `deploy/compose.ci.yaml` 使用独立数据库和测试模型服务。CI 先启动基础设施并执行迁移、集成测试，再启动业务消费者执行 Compose 冒烟，避免调度器领取集成测试自行控制的任务。
+`tests/support/model_stub.py` 提供本地 embeddings、rerank 和聊天协议；`tests/support/compose_smoke.py` 通过真实 API/Worker/调度器连续执行任务并检索。CI 的 `Deploy/compose.ci.yaml` 使用独立数据库和测试模型服务。CI 先启动基础设施并执行迁移、集成测试，再启动业务消费者执行 Compose 冒烟，避免调度器领取集成测试自行控制的任务。
 
 集成测试覆盖文本/文件上传、检索模式、版本构建/激活、并发切换、租户隔离、重复投递、broker 中断、过期续租拒绝、旧代次发布拒绝、失败产物清理、重试耗尽、历史任务恢复，以及真实 prefork 进程中断后恢复。测试可以强制结束自己创建的 Worker 进程组，不操作开发环境 Worker。
 

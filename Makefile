@@ -42,10 +42,10 @@ frontend-check:
 frontend-dev:
 	cd Frontend && npm run dev
 compose-up:
-	docker compose up -d --build
+	docker compose -f Deploy/docker-compose.yml up -d --build
 compose-down:
-	docker compose down
+	docker compose -f Deploy/docker-compose.yml down
 compose-observability-up:
-	docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+	docker compose -f Deploy/docker-compose.yml -f Deploy/docker-compose.observability.yml up -d --build
 compose-observability-down:
-	docker compose -f docker-compose.yml -f docker-compose.observability.yml down
+	docker compose -f Deploy/docker-compose.yml -f Deploy/docker-compose.observability.yml down
